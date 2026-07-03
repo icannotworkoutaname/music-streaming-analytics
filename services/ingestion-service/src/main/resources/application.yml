@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: ingestion-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all                    # 强一致
+      properties:
+        enable.idempotence: true   # 幂等生产者
+
+app:
+  kafka:
+    topic:
+      play-events: play-events
