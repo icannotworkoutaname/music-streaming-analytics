@@ -14,3 +14,12 @@ app:
   kafka:
     topic:
       play-events: play-events
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  metrics:
+    tags:
+      application: ${spring.application.name}

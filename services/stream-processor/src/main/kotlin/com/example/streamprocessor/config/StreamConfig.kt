@@ -16,6 +16,7 @@ import org.apache.kafka.streams.kstream.Materialized
 import org.apache.kafka.streams.kstream.Produced
 import org.apache.kafka.streams.kstream.TimeWindows
 import org.apache.kafka.streams.state.WindowStore
+import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.kafka.annotation.EnableKafkaStreams
@@ -25,7 +26,7 @@ import java.time.Duration
 
 @Configuration
 @EnableKafkaStreams
-class StreamConfig {
+class StreamConfig(private val meterRegistry: MeterRegistry) {
     @Bean
     fun playEventsStream(builder: StreamsBuilder): KStream<String, PlayEvent> {
         val playEventSerde = JsonSerde(PlayEvent::class.java).apply {
@@ -71,6 +72,7 @@ class StreamConfig {
             )
             .toStream()
             .map { windowedKey, stats ->
+                meterRegistry.counter("windows.emitted", "metric", "completion_rate").increment()
                 val rate = if (stats.starts > 0) stats.completes.toDouble() / stats.starts else 0.0
                 val output = SongCompletionStats(
                     songId = windowedKey.key(),
@@ -112,6 +114,7 @@ class StreamConfig {
             .count(Materialized.`as`("hourly-play-counts"))
             .toStream()
             .map { windowedKey, count ->
+                meterRegistry.counter("windows.emitted", "metric", "top_songs").increment()
                 val output = SongHourlyCount(
                     songId = windowedKey.key(),
                     windowStart = windowedKey.window().start(),
