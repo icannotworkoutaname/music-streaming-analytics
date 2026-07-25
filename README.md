@@ -51,6 +51,36 @@ curl http://localhost:8082/api/songs/song-A/completion
 curl "http://localhost:8082/api/songs/top?n=5"
 ```
 
+## Running on Kubernetes
+
+Prerequisites: minikube, kubectl
+
+```bash
+# 指向 minikube 内部的 Docker daemon（每个新终端都要重新执行一次）
+eval $(minikube docker-env)
+
+# 构建三个服务镜像
+docker build -t ingestion-service:v1 -f services/ingestion-service/Dockerfile .
+docker build -t stream-processor:v1 -f services/stream-processor/Dockerfile .
+docker build -t query-service:v1 -f services/query-service/Dockerfile .
+
+# 部署
+kubectl apply -f k8s/ingestion-service.yaml
+kubectl apply -f k8s/stream-processor.yaml
+kubectl apply -f k8s/query-service.yaml
+
+kubectl get pods -w
+
+# 本地访问
+kubectl port-forward svc/ingestion-service 8080:8080 &
+kubectl port-forward svc/query-service 8082:8082 &
+
+./scripts/test-data.sh
+curl http://localhost:8082/api/songs/song-A/completion
+```
+
+Kafka、PostgreSQL、Redis 通过 Helm 装在 `kafka` / `data` namespace。`docker-compose.dev.yml` 仍保留，用于不需要 K8s 的快速本地开发。
+
 ## Testing Late-arriving Events
 
 ```bash
@@ -74,4 +104,5 @@ into the original window, while events beyond it are dropped.
 ## Project Status
 
 - [x] Week 1: Core infrastructure and end-to-end pipeline
-- [ ] Week 2: Observability, GKE deployment, load testing
+- [x] Week 2: Observability, full in-cluster K8s deployment
+- [ ] Load testing, GKE deployment
