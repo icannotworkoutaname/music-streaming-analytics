@@ -6,7 +6,7 @@ spring:
     streams:
       application-id: stream-processor
       properties:
-        default.timestamp.extractor: com.example.streamprocessor.PlayEventTimestampExtractor
+        default.timestamp.extractor: com.musicstreaming.streamprocessor.PlayEventTimestampExtractor
         default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
         commit.interval.ms: 1000
 
