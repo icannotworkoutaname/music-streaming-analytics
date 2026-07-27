@@ -29,66 +29,7 @@ import java.time.Duration
 class StreamConfig(private val meterRegistry: MeterRegistry) {
     @Bean
     fun playEventsStream(builder: StreamsBuilder): KStream<String, PlayEvent> {
-        val playEventSerde = JsonSerde(PlayEvent::class.java).apply {
-            // 关掉 type headers，跨服务发送时简单一点
-            configure(mapOf(JsonDeserializer.USE_TYPE_INFO_HEADERS to false), false)
-        }
-
-        val stream: KStream<String, PlayEvent> = builder.stream(
-            "play-events",
-            Consumed.with(Serdes.String(), playEventSerde)
-        )
-
-        val statsSerde = JsonSerde(PlayStats::class.java).apply {
-            configure(mapOf(JsonDeserializer.USE_TYPE_INFO_HEADERS to false), false)
-        }
-
-        // 只统计 PLAY_START 事件，每首歌一个计数
-        stream
-            .groupByKey(Grouped.with(Serdes.String(), playEventSerde))
-            .windowedBy(
-                TimeWindows.ofSizeAndGrace(
-                    Duration.ofMinutes(5),
-                    Duration.ofMinutes(1)
-                )
-            )
-            .aggregate(
-                { PlayStats(0, 0) },
-                { _, event, stats ->
-                    when {
-                        event.eventType == EventType.PLAY_START ->
-                            stats.copy(starts = stats.starts + 1)
-
-                        event.eventType == EventType.PLAY_END &&
-                                event.positionMs >= event.durationMs * 0.9 ->
-                            stats.copy(completes = stats.completes + 1)
-
-                        else -> stats
-                    }
-                },
-                Materialized.`as`<String, PlayStats, WindowStore<Bytes, ByteArray>>("completion-stats")
-                    .withKeySerde(Serdes.String())
-                    .withValueSerde(statsSerde)
-            )
-            .toStream()
-            .map { windowedKey, stats ->
-                meterRegistry.counter("windows.emitted", "metric", "completion_rate").increment()
-                val rate = if (stats.starts > 0) stats.completes.toDouble() / stats.starts else 0.0
-                val output = SongCompletionStats(
-                    songId = windowedKey.key(),
-                    windowStart = windowedKey.window().start(),
-                    windowEnd = windowedKey.window().end(),
-                    starts = stats.starts,
-                    completes = stats.completes,
-                    completionRate = rate
-                )
-                KeyValue(windowedKey.key(), output)
-            }
-            .to(
-                "song-completion-stats",
-                Produced.with(Serdes.String(), JsonSerde(SongCompletionStats::class.java))
-            )
-        return stream
+        return buildCompletionRateTopology(builder, meterRegistry)
     }
 
     @Bean
@@ -130,4 +71,62 @@ class StreamConfig(private val meterRegistry: MeterRegistry) {
 
         return stream
     }
+}
+
+// 抽成顶层函数，不依赖 Spring，生产代码和测试都调它
+fun buildCompletionRateTopology(builder: StreamsBuilder, meterRegistry: MeterRegistry): KStream<String, PlayEvent> {
+    val playEventSerde = JsonSerde(PlayEvent::class.java).apply {
+        configure(mapOf(JsonDeserializer.USE_TYPE_INFO_HEADERS to false), false)
+    }
+
+    val stream: KStream<String, PlayEvent> = builder.stream(
+        "play-events",
+        Consumed.with(Serdes.String(), playEventSerde)
+    )
+
+    val statsSerde = JsonSerde(PlayStats::class.java).apply {
+        configure(mapOf(JsonDeserializer.USE_TYPE_INFO_HEADERS to false), false)
+    }
+
+    stream
+        .groupByKey(Grouped.with(Serdes.String(), playEventSerde))
+        .windowedBy(
+            TimeWindows.ofSizeAndGrace(Duration.ofMinutes(5), Duration.ofMinutes(1))
+        )
+        .aggregate(
+            { PlayStats(0, 0) },
+            { _, event, stats ->
+                when {
+                    event.eventType == EventType.PLAY_START ->
+                        stats.copy(starts = stats.starts + 1)
+                    event.eventType == EventType.PLAY_END &&
+                            event.positionMs >= event.durationMs * 0.9 ->
+                        stats.copy(completes = stats.completes + 1)
+                    else -> stats
+                }
+            },
+            Materialized.`as`<String, PlayStats, WindowStore<Bytes, ByteArray>>("completion-stats")
+                .withKeySerde(Serdes.String())
+                .withValueSerde(statsSerde)
+        )
+        .toStream()
+        .map { windowedKey, stats ->
+            meterRegistry.counter("windows.emitted", "metric", "completion_rate").increment()
+            val rate = if (stats.starts > 0) stats.completes.toDouble() / stats.starts else 0.0
+            val output = SongCompletionStats(
+                songId = windowedKey.key(),
+                windowStart = windowedKey.window().start(),
+                windowEnd = windowedKey.window().end(),
+                starts = stats.starts,
+                completes = stats.completes,
+                completionRate = rate
+            )
+            KeyValue(windowedKey.key(), output)
+        }
+        .to(
+            "song-completion-stats",
+            Produced.with(Serdes.String(), JsonSerde(SongCompletionStats::class.java))
+        )
+
+    return stream
 }

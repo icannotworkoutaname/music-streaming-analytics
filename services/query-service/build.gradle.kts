@@ -34,6 +34,8 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:kafka")
     testImplementation("com.redis:testcontainers-redis:2.2.4")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers") // 提供 @ServiceConnection
+    testImplementation("org.awaitility:awaitility") // 异步等待 consumer 消费完成，替代 Thread.sleep
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

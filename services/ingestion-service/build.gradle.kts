@@ -30,6 +30,7 @@ dependencies {
     // Testcontainers：集成测试用真实 Kafka 容器验证消息落地
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:kafka")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers") // 提供 @ServiceConnection
     implementation(kotlin("stdlib"))
 }
 
