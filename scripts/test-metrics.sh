@@ -7,7 +7,7 @@ INGESTION=http://localhost:8080
 STREAM=http://localhost:8081
 QUERY=http://localhost:8082
 
-echo "=== 1. Prometheus 端点可达性 ==="
+echo "=== 1. Prometheus endpoint reachability ==="
 
 for url in "$INGESTION/actuator/prometheus" "$STREAM/actuator/prometheus" "$QUERY/actuator/prometheus"; do
   status=$(curl -s -o /dev/null -w "%{http_code}" "$url")
@@ -20,12 +20,12 @@ for url in "$INGESTION/actuator/prometheus" "$STREAM/actuator/prometheus" "$QUER
 done
 
 echo ""
-echo "=== 2. queries.executed counter 递增验证 ==="
+echo "=== 2. queries.executed counter increment check ==="
 
 before=$(curl -s "$QUERY/actuator/prometheus" \
   | grep 'queries_executed_total{' \
   | awk '{sum += $2} END {print sum+0}')
-echo "  查询前 queries_executed_total = $before"
+echo "  before queries: queries_executed_total = $before"
 
 # 触发两种查询各一次
 curl -s "$QUERY/api/songs/song-A/completion" > /dev/null
@@ -34,18 +34,18 @@ curl -s "$QUERY/api/songs/top?n=5" > /dev/null
 after=$(curl -s "$QUERY/actuator/prometheus" \
   | grep 'queries_executed_total{' \
   | awk '{sum += $2} END {print sum+0}')
-echo "  查询后 queries_executed_total = $after"
+echo "  after queries:  queries_executed_total = $after"
 
 diff=$(echo "$after - $before" | bc)
 if [ "$diff" = "2" ]; then
-  echo "  OK  counter 递增了 2（符合预期）"
+  echo "  OK  counter incremented by 2 (as expected)"
 else
-  echo "  FAIL 期望递增 2，实际递增 $diff"
+  echo "  FAIL expected an increment of 2, got $diff"
   exit 1
 fi
 
 echo ""
-echo "=== 3. windows.emitted counter 当前值 ==="
+echo "=== 3. windows.emitted counter current value ==="
 
 curl -s "$STREAM/actuator/prometheus" \
   | grep 'windows_emitted_total{' \
@@ -54,7 +54,7 @@ curl -s "$STREAM/actuator/prometheus" \
     done
 
 echo ""
-echo "=== 4. 各服务 application tag 验证 ==="
+echo "=== 4. application tag check per service ==="
 
 for svc in ingestion-service stream-processor query-service; do
   port=8080
@@ -64,9 +64,9 @@ for svc in ingestion-service stream-processor query-service; do
   hit=$(curl -s "http://localhost:$port/actuator/prometheus" \
     | grep -c "application=\"$svc\"" || true)
   if [ "$hit" -gt "0" ]; then
-    echo "  OK  $svc: application tag 存在（$hit 处匹配）"
+    echo "  OK  $svc: application tag present ($hit matches)"
   else
-    echo "  FAIL $svc: 未找到 application=\"$svc\" tag"
+    echo "  FAIL $svc: no application=\"$svc\" tag found"
     exit 1
   fi
 done
