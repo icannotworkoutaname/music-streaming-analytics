@@ -1,0 +1,22 @@
+# helm get values redis -n data -o yaml
+# 应用: helm upgrade redis <chart> -n data -f k8s/redis-values.yaml
+#
+# chart: redis-22.0.7   app version: 8.2.1   namespace: data   installed: 2026-06-05
+#
+# 注：`data` namespace 下还装有 postgresql-16.7.27（app 17.6.0），但目前没有任何服务
+# 连接它（见 ADR 004），因此暂未导出对应的 values 文件。若后续接入 PostgreSQL，
+# 应同步补一份 k8s/postgres-values.yaml。
+auth:
+  enabled: false
+global:
+  security:
+    allowInsecureImages: true
+image:
+  registry: registry-1.docker.io
+  repository: bitnamilegacy/redis
+  tag: 8.2.1
+master:
+  persistence:
+    size: 1Gi
+replica:
+  replicaCount: 0

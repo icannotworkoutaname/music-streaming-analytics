@@ -1,0 +1,23 @@
+# helm get values kafka -n kafka -o yaml
+# 应用: helm upgrade kafka <chart> -n kafka -f k8s/kafka-values.yaml
+#
+# chart: kafka-32.4.3   app version: 4.0.0   namespace: kafka   installed: 2026-06-05
+# chart 版本需一并记录：ADR 001 中 offsetsTopicReplicationFactor 未生效的现象与 chart
+# 版本相关，升级版本后需重新核对本文件的参数路径是否仍然有效。
+controller:
+  replicaCount: 1
+image:
+  registry: docker.io
+  repository: bitnamilegacy/kafka
+listeners:
+  client:
+    protocol: PLAINTEXT
+  controller:
+    protocol: PLAINTEXT
+  interbroker:
+    protocol: PLAINTEXT
+offsetsTopicReplicationFactor: 1
+persistence:
+  size: 2Gi
+transactionStateLogMinIsr: 1
+transactionStateLogReplicationFactor: 1
