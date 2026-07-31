@@ -1,0 +1,81 @@
+++ date -u -Iseconds
++ echo '=== NORMAL CPU (500m limit, current deployed config) startup test: 2026-07-30T16:41:57+00:00 ==='
+=== NORMAL CPU (500m limit, current deployed config) startup test: 2026-07-30T16:41:57+00:00 ===
++ kubectl get deployment stream-processor -o 'jsonpath=resources: {.spec.template.spec.containers[0].resources}'
+resources: {"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"250m","memory":"256Mi"}}+ echo
+
+++ kubectl get pods -l app=stream-processor -o 'jsonpath={.items[0].metadata.name}'
++ OLD_POD=stream-processor-67bb89fb6b-cxcr9
+++ date -u -Iseconds
++ echo 'deleting pod: stream-processor-67bb89fb6b-cxcr9 at 2026-07-30T16:41:58+00:00'
+deleting pod: stream-processor-67bb89fb6b-cxcr9 at 2026-07-30T16:41:58+00:00
+++ date +%s
++ DELETE_T0=1785429718
++ kubectl delete pod stream-processor-67bb89fb6b-cxcr9
+pod "stream-processor-67bb89fb6b-cxcr9" deleted from default namespace
++ kubectl wait --for=condition=Ready pod -l app=stream-processor --timeout=180s
+pod/stream-processor-67bb89fb6b-ljzn4 condition met
+++ date +%s
++ READY_T1=1785429721
+++ date -u -Iseconds
++ echo 'pod Ready at 2026-07-30T16:42:01+00:00, elapsed since delete: 3s'
+pod Ready at 2026-07-30T16:42:01+00:00, elapsed since delete: 3s
+++ kubectl get pods -l app=stream-processor -o 'jsonpath={.items[0].metadata.name}'
++ NEW_POD=stream-processor-67bb89fb6b-ljzn4
++ echo 'new pod: stream-processor-67bb89fb6b-ljzn4'
+new pod: stream-processor-67bb89fb6b-ljzn4
++ kubectl logs stream-processor-67bb89fb6b-ljzn4
++ grep -i 'Started StreamProcessorApplicationKt'
+found at attempt 1 (2026-07-30T16:42:36+00:00): 2026-07-30T16:42:35.086Z  INFO 1 --- [stream-processor] [           main] c.e.s.StreamProcessorApplicationKt       : Started StreamProcessorApplicationKt in 31.343 seconds (process running for 34.51)
++ echo
+
+++ date -u -Iseconds
++ echo '=== THROTTLED CPU (100m limit) startup test: 2026-07-30T16:43:01+00:00 ==='
+=== THROTTLED CPU (100m limit) startup test: 2026-07-30T16:43:01+00:00 ===
++ kubectl set resources deployment/stream-processor -c stream-processor --limits=cpu=100m,memory=512Mi --requests=cpu=100m,memory=256Mi
+deployment.apps/stream-processor resource requirements updated
++ kubectl rollout status deployment/stream-processor --timeout=300s
+Waiting for deployment "stream-processor" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "stream-processor" rollout to finish: 1 old replicas are pending termination...
+deployment "stream-processor" successfully rolled out
+++ date -u -Iseconds
++ echo 'rollout (first pod under throttle) settled at: 2026-07-30T16:43:04+00:00'
+rollout (first pod under throttle) settled at: 2026-07-30T16:43:04+00:00
++ kubectl get deployment stream-processor -o 'jsonpath=resources: {.spec.template.spec.containers[0].resources}'
+resources: {"limits":{"cpu":"100m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"256Mi"}}+ echo
+
+++ kubectl get pods -l app=stream-processor -o 'jsonpath={.items[0].metadata.name}'
++ POD=stream-processor-67bb89fb6b-ljzn4
+++ date -u -Iseconds
++ echo 'throttled pod: stream-processor-67bb89fb6b-ljzn4, delete_t0: 2026-07-30T16:43:04+00:00'
+throttled pod: stream-processor-67bb89fb6b-ljzn4, delete_t0: 2026-07-30T16:43:04+00:00
+correction: actual throttled pod is stream-processor-788fd7c54-wnx4f (new ReplicaSet), creationTimestamp: 2026-07-30T16:43:01Z
+found at attempt 15 (2026-07-30T16:56:16+00:00): 2026-07-30T16:56:08.156Z  INFO 1 --- [stream-processor] [           main] c.e.s.StreamProcessorApplicationKt       : Started StreamProcessorApplicationKt in 764.151 seconds (process running for 196.048)
++ echo
+
+++ date -u -Iseconds
++ echo '=== NOTE on throttled-run data quality: 2026-07-30T17:01:34+00:00 ==='
+=== NOTE on throttled-run data quality: 2026-07-30T17:01:34+00:00 ===
++ echo 'Poll loop showed a gap between attempt 8 (16:45:15Z) and attempt 9 (16:55:14Z), ~10 min, where each attempt should be ~10s apart.'
+Poll loop showed a gap between attempt 8 (16:45:15Z) and attempt 9 (16:55:14Z), ~10 min, where each attempt should be ~10s apart.
++ echo 'This matches the same class of environment-level stall documented in ADR 007 Observation 2 (WSL2/host stall during a long-running k6 test).'
+This matches the same class of environment-level stall documented in ADR 007 Observation 2 (WSL2/host stall during a long-running k6 test).
++ echo 'The app'\''s own two internal clocks disagree as a result: Started-in-X-seconds=764.151s vs process-uptime=196.048s (normally these track closely).'
+The app's own two internal clocks disagree as a result: Started-in-X-seconds=764.151s vs process-uptime=196.048s (normally these track closely).
++ echo 'Treat both throttled numbers as upper bounds contaminated by this stall, not a clean measurement of CPU-throttling alone.'
+Treat both throttled numbers as upper bounds contaminated by this stall, not a clean measurement of CPU-throttling alone.
++ echo
+
+++ date -u -Iseconds
++ echo '=== restore stream-processor CPU to 500m/250m (declared config): 2026-07-30T17:01:34+00:00 ==='
+=== restore stream-processor CPU to 500m/250m (declared config): 2026-07-30T17:01:34+00:00 ===
++ kubectl apply -f k8s/stream-processor.yaml
+deployment.apps/stream-processor configured
+service/stream-processor unchanged
++ kubectl rollout status deployment/stream-processor --timeout=120s
+Waiting for deployment "stream-processor" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "stream-processor" rollout to finish: 1 old replicas are pending termination...
+deployment "stream-processor" successfully rolled out
++ kubectl get deployment stream-processor -o 'jsonpath=resources: {.spec.template.spec.containers[0].resources}'
+resources: {"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"250m","memory":"256Mi"}}+ echo
+

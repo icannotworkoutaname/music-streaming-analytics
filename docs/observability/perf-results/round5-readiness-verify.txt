@@ -1,0 +1,69 @@
++ date -u -Iseconds
+2026-07-31T18:09:04+00:00
++ echo '=== readinessProbe verification run ==='
+=== readinessProbe verification run ===
++ kubectl get deployment stream-processor -o 'jsonpath=readinessProbe: {.spec.template.spec.containers[0].readinessProbe}'
+readinessProbe: {"failureThreshold":3,"httpGet":{"path":"/actuator/health","port":8081,"scheme":"HTTP"},"initialDelaySeconds":10,"periodSeconds":5,"successThreshold":1,"timeoutSeconds":1}+ echo
+
++ kubectl get deployment stream-processor -o 'jsonpath=resources: {.spec.template.spec.containers[0].resources}'
+resources: {"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"250m","memory":"256Mi"}}+ echo
+
++ set +x
+=== old pod: stream-processor-75cb6f4db-r4f8l, deleting at 2026-07-31T18:09:05+00:00 ===
+pod "stream-processor-75cb6f4db-r4f8l" deleted from default namespace
+
+=== poll loop: pod READY state every 2s (elapsed measured from delete) ===
+t+0   s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=ContainerCreating
+t+3   s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=ContainerCreating
+t+5   s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+7   s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+9   s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+12  s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+14  s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+16  s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+19  s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+21  s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+23  s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+25  s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+28  s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+30  s  stream-processor-75cb6f4db-4c6tf  READY=0/1  STATUS=Running
+t+32  s  stream-processor-75cb6f4db-4c6tf  READY=1/1  STATUS=Running
+>>> new pod became 1/1 Ready at t+32s after delete
+
+=== summary ===
+new pod:        stream-processor-75cb6f4db-4c6tf
+Ready at:       t+32s after delete
+delete wall ts: 2026-07-31T18:09:05+00:00
+
+=== Spring Boot startup line from the same pod ===
+2026-07-31T18:09:32.750Z  INFO 1 --- [stream-processor] [           main] c.e.s.StreamProcessorApplicationKt       : Started StreamProcessorApplicationKt in 22.5 seconds (process running for 24.831)
+
+=== probe arithmetic check ===
+delete issued            18:09:05Z   (t+0)
+container Running        ~t+3..5s    (poll showed ContainerCreating through t+3)
+JVM process start        ~18:09:07.9Z  (derived: 18:09:32.750 minus "process running for 24.831")
+Spring Boot Started      18:09:32.750Z = t+27.8s, "in 22.5 seconds"
+probe schedule           initialDelaySeconds=10 from container start (~t+3) -> first probe ~t+13,
+                         then every periodSeconds=5: t+18, t+23, t+28, ...
+                         first probe that can succeed is t+28 (app ready at t+27.8)
+observed 1/1 Ready       between t+30 (last 0/1 sample) and t+32 (first 1/1 sample)
+                         -> ~2-4s of kubelet status-propagation lag on top of the t+28 probe. Consistent.
+
+CONCLUSION: the probe is effective. The pod was excluded from the Service endpoints for the
+full ~30s the application required to start. For comparison, the pre-probe behaviour recorded
+in round5-startup-timing.txt (same drill, 2026-07-30 16:41:58Z) shows "kubectl wait
+--for=condition=Ready" returning after 3s while the application did not log "Started" until
+34s later, i.e. a 34-second window during which Kubernetes advertised a pod that was unable to
+serve requests.
+
+NOTE on startup-time variance: this run reports 22.5s; the 2026-07-30 run reported 31.343s.
+Both are of the same order of magnitude (tens of seconds, not the "a few seconds" originally
+stated). The spread is consistent with a cold JVM on a single-node minikube under varying page
+cache conditions. Neither figure is a tuned benchmark result.
+
+NOTE on ReplicaSet: pods in this run are 75cb6f4db-*, whereas round5-startup-timing.txt shows
+67bb89fb6b-*. The hash changed because adding readinessProbe modified the pod template, which
+independently confirms that the probe was applied to the cluster rather than only to the file.
+
+2026-07-31T18:09:38+00:00
+=== END ===

@@ -1,0 +1,66 @@
+START_TS 1785260682 note=stream-processor throttled to 100m CPU
+1785260682 lag=2905 phase=load
+1785260695 lag=10103 phase=load
+1785260709 lag=17200 phase=load
+1785260723 lag=23247 phase=load
+1785260735 lag=27814 phase=load
+1785260748 lag=31803 phase=load
+1785260761 lag=34925 phase=load
+1785260775 lag=31422 phase=load
+1785260788 lag=27535 phase=load
+1785260802 lag=12246 phase=load
+1785260816 lag=9159 phase=load
+1785260829 lag=2987 phase=load
+1785260843 lag=639 phase=load
+1785260858 lag=1241 phase=load
+1785260873 lag=973 phase=load
+1785260886 lag=1091 phase=load
+1785260900 lag=1180 phase=load
+1785260913 lag=740 phase=load
+1785260927 lag=988 phase=load
+1785260941 lag=958 phase=load
+1785260955 lag=1293 phase=load
+1785260969 lag=893 phase=load
+1785260984 lag=913 phase=load
+1785260997 lag=2155 phase=load
+1785261010 lag=0 phase=load
+K6_DONE_TS 1785261024
+RESTORE_TS 1785261024 note=restoring stream-processor to 500m/250m CPU
+deployment.apps/stream-processor resource requirements updated
+1785261024 lag=0 phase=recovery pod_phase=Running
+1785261034 lag=0 phase=recovery pod_phase=Running
+1785261044 lag=0 phase=recovery pod_phase=Running
+1785261053 lag=0 phase=recovery pod_phase=Running
+1785261064 lag=0 phase=recovery pod_phase=Running
+1785261075 lag=0 phase=recovery pod_phase=Running
+1785261085 lag=0 phase=recovery pod_phase=Running
+1785261096 lag=0 phase=recovery pod_phase=Running
+1785261107 lag=0 phase=recovery pod_phase=Running
+1785261117 lag=0 phase=recovery pod_phase=Running
+1785261127 lag=0 phase=recovery pod_phase=Running
+1785261138 lag=0 phase=recovery pod_phase=Running
+1785261149 lag=0 phase=recovery pod_phase=Running
+1785261160 lag=0 phase=recovery pod_phase=Running
+1785261171 lag=0 phase=recovery pod_phase=Running
+1785261182 lag=0 phase=recovery pod_phase=Running
+1785261192 lag=0 phase=recovery pod_phase=Running
+1785261202 lag=0 phase=recovery pod_phase=Running
+1785261212 lag=0 phase=recovery pod_phase=Running
+1785261223 lag=0 phase=recovery pod_phase=Running
+1785261233 lag=0 phase=recovery pod_phase=Running
+1785261243 lag=0 phase=recovery pod_phase=Running
+1785261254 lag=0 phase=recovery pod_phase=Running
+1785261265 lag=0 phase=recovery pod_phase=Running
+1785261275 lag=0 phase=recovery pod_phase=Running
+1785261285 lag=0 phase=recovery pod_phase=Running
+1785261296 lag=0 phase=recovery pod_phase=Running
+1785261306 lag=0 phase=recovery pod_phase=Running
+1785261318 lag=0 phase=recovery pod_phase=Running
+1785261329 lag=0 phase=recovery pod_phase=Running
+1785261339 lag=0 phase=recovery pod_phase=Running
+1785261350 lag=0 phase=recovery pod_phase=Running
+1785261360 lag=0 phase=recovery pod_phase=Running
+1785261371 lag=0 phase=recovery pod_phase=Running
+1785261381 lag=0 phase=recovery pod_phase=Running
+1785261392 lag=0 phase=recovery pod_phase=Running
+END_TS 1785261402

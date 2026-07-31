@@ -1,0 +1,178 @@
+++ date -u -Iseconds
++ echo '=== baseline consumer group describe (before v2 run): 2026-07-30T15:54:01+00:00 ==='
+=== baseline consumer group describe (before v2 run): 2026-07-30T15:54:01+00:00 ===
++ kubectl exec -n kafka kafka-controller-0 -- kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group stream-processor
++ grep -v WARN
+Defaulted container "kafka" out of: kafka, prepare-config (init)
+
+GROUP            TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                                                        HOST            CLIENT-ID
+stream-processor play-events     1          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     0          679022          679022          0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     3          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     2          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     5          452071          452071          0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     4          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
++ echo
+
+++ date -u -Iseconds
++ echo '=== mid-load scale to 2 replicas: 2026-07-30T15:55:45+00:00 ==='
+=== mid-load scale to 2 replicas: 2026-07-30T15:55:45+00:00 ===
++ kubectl scale deployment stream-processor --replicas=2
+deployment.apps/stream-processor scaled
++ kubectl rollout status deployment/stream-processor --timeout=120s
+Waiting for deployment "stream-processor" rollout to finish: 1 of 2 updated replicas are available...
+deployment "stream-processor" successfully rolled out
++ kubectl get pods -l app=stream-processor -o wide
+NAME                                READY   STATUS    RESTARTS   AGE   IP            NODE       NOMINATED NODE   READINESS GATES
+stream-processor-67bb89fb6b-cxcr9   1/1     Running   0          46h   10.244.0.29   minikube   <none>           <none>
+stream-processor-67bb89fb6b-wjkwb   1/1     Running   0          2s    10.244.0.32   minikube   <none>           <none>
++ echo
+
+++ date -u -Iseconds
++ echo '=== waiting 45s for rebalance to settle: 2026-07-30T15:55:48+00:00 ==='
+=== waiting 45s for rebalance to settle: 2026-07-30T15:55:48+00:00 ===
++ sleep 45
++ echo
+
+++ date -u -Iseconds
++ echo '=== consumer group describe, snapshot 1 (right after settle): 2026-07-30T15:56:33+00:00 ==='
+=== consumer group describe, snapshot 1 (right after settle): 2026-07-30T15:56:33+00:00 ===
++ kubectl exec -n kafka kafka-controller-0 -- kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group stream-processor
++ grep -v WARN
+Defaulted container "kafka" out of: kafka, prepare-config (init)
+
+GROUP            TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                                                        HOST            CLIENT-ID
+stream-processor play-events     1          14484           14615           131             stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     0          693724          693884          160             stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     3          14415           14552           137             stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     2          14967           15109           142             stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     5          466960          467119          159             stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     4          15011           15182           171             stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
++ echo
+
+++ date -u -Iseconds
++ echo '=== waiting 30s more to observe growth on both instances: 2026-07-30T15:56:40+00:00 ==='
+=== waiting 30s more to observe growth on both instances: 2026-07-30T15:56:40+00:00 ===
++ sleep 30
++ echo
+
+++ date -u -Iseconds
++ echo '=== consumer group describe, snapshot 2 (to compare growth deltas per partition/instance): 2026-07-30T15:57:10+00:00 ==='
+=== consumer group describe, snapshot 2 (to compare growth deltas per partition/instance): 2026-07-30T15:57:10+00:00 ===
++ kubectl exec -n kafka kafka-controller-0 -- kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group stream-processor
++ grep -v WARN
+Defaulted container "kafka" out of: kafka, prepare-config (init)
+
+GROUP            TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                                                        HOST            CLIENT-ID
+stream-processor play-events     1          18209           18297           88              stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     0          697498          697589          91              stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     3          18194           18279           85              stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     2          18617           18689           72              stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     5          470760          470842          82              stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     4          18647           18731           84              stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
++ echo
+
++ echo '=== k6 summary (full run finished naturally at 5m30s): ==='
+=== k6 summary (full run finished naturally at 5m30s): ===
++ tail -60 /tmp/k6-round4v2.log
++ grep -A100 'checks_total\|http_req_duration\|scenarios:'
+     http_req_duration..............: avg=200.09ms min=1.37ms med=98.15ms max=2.8s    p(90)=716.3ms  p(95)=1.09s   
+       { expected_response:true }...: avg=200.09ms min=1.37ms med=98.15ms max=2.8s    p(90)=716.3ms  p(95)=1.09s   
+     http_req_failed................: 0.00%   0 out of 187203
+     http_req_receiving.............: avg=2.12ms   min=8.32µs med=84.82µs max=1.21s   p(90)=593.61µs p(95)=2.52ms  
+     http_req_sending...............: avg=45.48µs  min=2.98µs med=29.62µs max=11.04ms p(90)=63.88µs  p(95)=113.69µs
+     http_req_tls_handshaking.......: avg=0s       min=0s     med=0s      max=0s      p(90)=0s       p(95)=0s      
+     http_req_waiting...............: avg=197.92ms min=1.33ms med=97.59ms max=2.8s    p(90)=714.83ms p(95)=1.09s   
+     http_reqs......................: 187203  567.313638/s
+     iteration_duration.............: avg=200.48ms min=1.47ms med=98.57ms max=2.8s    p(90)=716.8ms  p(95)=1.09s   
+     iterations.....................: 187203  567.313638/s
+     vus............................: 1       min=1                max=200
+     vus_max........................: 200     min=200              max=200
+
+
+running (5m30.0s), 000/200 VUs, 187203 complete and 0 interrupted iterations
+default ✓ [ 100% ] 000/200 VUs  5m30s
++ echo
+
+++ date -u -Iseconds
++ echo '=== FINAL consumer group describe before scale-down (post probing-rebalance, ~14min after scale-up): 2026-07-30T16:11:17+00:00 ==='
+=== FINAL consumer group describe before scale-down (post probing-rebalance, ~14min after scale-up): 2026-07-30T16:11:17+00:00 ===
++ kubectl exec -n kafka kafka-controller-0 -- kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group stream-processor
++ grep -v WARN
+Defaulted container "kafka" out of: kafka, prepare-config (init)
+
+GROUP            TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                                                        HOST            CLIENT-ID
+stream-processor play-events     1          31117           31117           0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     3          30761           30761           0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     5          483447          483447          0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     4          31359           31359           0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     0          710316          710316          0               stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer-c226daff-e128-4c85-a46e-aef0f80b6216 /10.244.0.32    stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer
+stream-processor play-events     2          31296           31296           0               stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer-c226daff-e128-4c85-a46e-aef0f80b6216 /10.244.0.32    stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer
++ echo
+
++ echo '=== new pod (stream-processor-67bb89fb6b-wjkwb) log excerpt: probing rebalance / active handoff timeline ==='
+=== new pod (stream-processor-67bb89fb6b-wjkwb) log excerpt: probing rebalance / active handoff timeline ===
++ kubectl logs stream-processor-67bb89fb6b-wjkwb --since=20m
++ grep -i 'probing.rebalance.interval.ms = \|Request joining group due to\|generationId=1[5-9]\|New active tasks'
+	probing.rebalance.interval.ms = 600000
+	probing.rebalance.interval.ms = 600000
+2026-07-30T15:56:25.910Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer, groupId=stream-processor] Request joining group due to: need to re-join with the given member-id: stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer-c226daff-e128-4c85-a46e-aef0f80b6216
+2026-07-30T15:56:26.457Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer, groupId=stream-processor] Successfully joined group with generation Generation{generationId=15, memberId='stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer-c226daff-e128-4c85-a46e-aef0f80b6216', protocol='stream'}
+2026-07-30T15:56:26.510Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer, groupId=stream-processor] Successfully synced group in generation Generation{generationId=15, memberId='stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer-c226daff-e128-4c85-a46e-aef0f80b6216', protocol='stream'}
+	New active tasks: []
+2026-07-30T16:06:26.570Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer, groupId=stream-processor] Request joining group due to: group is already rebalancing
+2026-07-30T16:06:26.574Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer, groupId=stream-processor] Successfully joined group with generation Generation{generationId=16, memberId='stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer-c226daff-e128-4c85-a46e-aef0f80b6216', protocol='stream'}
+2026-07-30T16:06:26.592Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer, groupId=stream-processor] Successfully synced group in generation Generation{generationId=16, memberId='stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer-c226daff-e128-4c85-a46e-aef0f80b6216', protocol='stream'}
+	New active tasks: []
+2026-07-30T16:06:26.616Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer, groupId=stream-processor] Request joining group due to: triggered followup rebalance scheduled for 0
+2026-07-30T16:06:26.713Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer, groupId=stream-processor] Successfully joined group with generation Generation{generationId=17, memberId='stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer-c226daff-e128-4c85-a46e-aef0f80b6216', protocol='stream'}
+2026-07-30T16:06:26.727Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer, groupId=stream-processor] Successfully synced group in generation Generation{generationId=17, memberId='stream-processor-b17f5b31-6e3c-49c6-96f2-9ad8fe11c815-StreamThread-1-consumer-c226daff-e128-4c85-a46e-aef0f80b6216', protocol='stream'}
+	New active tasks: [0_2, 0_0]
++ echo
+
+++ date -u -Iseconds
++ echo '=== scale back to 1 replica: 2026-07-30T16:11:23+00:00 ==='
+=== scale back to 1 replica: 2026-07-30T16:11:23+00:00 ===
++ kubectl scale deployment stream-processor --replicas=1
+deployment.apps/stream-processor scaled
++ kubectl rollout status deployment/stream-processor --timeout=120s
+deployment "stream-processor" successfully rolled out
++ sleep 60
++ echo
+
+++ date -u -Iseconds
++ echo '=== FINAL pods: 2026-07-30T16:12:24+00:00 ==='
+=== FINAL pods: 2026-07-30T16:12:24+00:00 ===
++ kubectl get pods -o wide
+NAME                                READY   STATUS    RESTARTS      AGE    IP            NODE       NOMINATED NODE   READINESS GATES
+hello-app-55c55b8956-gtl8j          1/1     Running   2 (22d ago)   55d    10.244.0.17   minikube   <none>           <none>
+ingestion-service-b95675d96-5qmc9   1/1     Running   0             5d2h   10.244.0.21   minikube   <none>           <none>
+query-service-5588d77cbd-nltzj      1/1     Running   0             5d2h   10.244.0.23   minikube   <none>           <none>
+stream-processor-67bb89fb6b-cxcr9   1/1     Running   0             46h    10.244.0.29   minikube   <none>           <none>
++ echo
+
+++ date -u -Iseconds
++ echo '=== FINAL consumer group describe (post scale-down, +60s for session timeout to clear stale member): 2026-07-30T16:12:24+00:00 ==='
+=== FINAL consumer group describe (post scale-down, +60s for session timeout to clear stale member): 2026-07-30T16:12:24+00:00 ===
++ kubectl exec -n kafka kafka-controller-0 -- kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group stream-processor
++ grep -v WARN
+Defaulted container "kafka" out of: kafka, prepare-config (init)
+
+GROUP            TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                                                        HOST            CLIENT-ID
+stream-processor play-events     1          31117           31117           0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     0          710316          710316          0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     3          30761           30761           0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     2          31296           31296           0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     5          483447          483447          0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     4          31359           31359           0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
++ echo
+
+++ date -u -Iseconds
++ echo '=== full topic offset spread (all 6 partitions, final state): 2026-07-30T16:12:29+00:00 ==='
+=== full topic offset spread (all 6 partitions, final state): 2026-07-30T16:12:29+00:00 ===
++ kubectl exec -n kafka kafka-controller-0 -- kafka-run-class.sh kafka.tools.GetOffsetShell --broker-list localhost:9092 --topic play-events
++ grep -v WARN
+Defaulted container "kafka" out of: kafka, prepare-config (init)
+Error: Could not find or load main class kafka.tools.GetOffsetShell
+Caused by: java.lang.ClassNotFoundException: kafka.tools.GetOffsetShell
+command terminated with exit code 1

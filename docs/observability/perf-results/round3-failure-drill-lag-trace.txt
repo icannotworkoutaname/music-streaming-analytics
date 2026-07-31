@@ -1,0 +1,35 @@
+START_TS 1785253447
+KILL_TS 1785253467 pod=stream-processor-67bb89fb6b-pkzrx
+pod "stream-processor-67bb89fb6b-pkzrx" deleted from default namespace
+1785253467 lag=4070 pod_phase=Running
+1785253476 lag=10336 pod_phase=Running
+1785253483 lag=16259 pod_phase=Running
+1785253491 lag=22314 pod_phase=Running
+1785253499 lag=26837 pod_phase=Running
+1785253507 lag=32467 pod_phase=Running
+1785253516 lag=21251 pod_phase=Running
+1785253526 lag=215 pod_phase=Running
+1785253534 lag=753 pod_phase=Running
+1785253543 lag=643 pod_phase=Running
+1785253552 lag=27 pod_phase=Running
+1785253561 lag=561 pod_phase=Running
+1785253569 lag=663 pod_phase=Running
+1785253578 lag=220 pod_phase=Running
+1785253587 lag=819 pod_phase=Running
+1785253597 lag=45 pod_phase=Running
+1785253606 lag=263 pod_phase=Running
+1785253615 lag=564 pod_phase=Running
+1785253624 lag=771 pod_phase=Running
+1785253633 lag=393 pod_phase=Running
+1785253642 lag=565 pod_phase=Running
+1785253651 lag=37 pod_phase=Running
+1785253660 lag=287 pod_phase=Running
+1785253671 lag=836 pod_phase=Running
+1785253680 lag=958 pod_phase=Running
+1785253688 lag=195 pod_phase=Running
+1785253698 lag=263 pod_phase=Running
+1785253706 lag=388 pod_phase=Running
+1785253716 lag=660 pod_phase=Running
+1785253725 lag=691 pod_phase=Running
+K6_DONE_TS 1785254308
+END_TS 1785254308

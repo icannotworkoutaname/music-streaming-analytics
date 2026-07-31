@@ -1,0 +1,222 @@
+++ date -u -Iseconds
++ echo '=== BEFORE 2026-07-30T14:56:43+00:00 ==='
+=== BEFORE 2026-07-30T14:56:43+00:00 ===
++ kubectl get pods -o wide
+NAME                                READY   STATUS    RESTARTS      AGE    IP            NODE       NOMINATED NODE   READINESS GATES
+hello-app-55c55b8956-gtl8j          1/1     Running   2 (22d ago)   55d    10.244.0.17   minikube   <none>           <none>
+ingestion-service-b95675d96-5qmc9   1/1     Running   0             5d1h   10.244.0.21   minikube   <none>           <none>
+query-service-5588d77cbd-nltzj      1/1     Running   0             5d1h   10.244.0.23   minikube   <none>           <none>
+stream-processor-67bb89fb6b-cxcr9   1/1     Running   0             45h    10.244.0.29   minikube   <none>           <none>
++ echo
+
+++ date -u -Iseconds
++ echo '=== scale to 2 replicas: 2026-07-30T14:56:44+00:00 ==='
+=== scale to 2 replicas: 2026-07-30T14:56:44+00:00 ===
++ kubectl scale deployment stream-processor --replicas=2
+deployment.apps/stream-processor scaled
++ kubectl rollout status deployment/stream-processor --timeout=120s
+Waiting for deployment "stream-processor" rollout to finish: 1 of 2 updated replicas are available...
+deployment "stream-processor" successfully rolled out
+++ date -u -Iseconds
++ echo 'rollout done: 2026-07-30T14:56:46+00:00'
+rollout done: 2026-07-30T14:56:46+00:00
++ kubectl get pods -o wide
+NAME                                READY   STATUS    RESTARTS      AGE    IP            NODE       NOMINATED NODE   READINESS GATES
+hello-app-55c55b8956-gtl8j          1/1     Running   2 (22d ago)   55d    10.244.0.17   minikube   <none>           <none>
+ingestion-service-b95675d96-5qmc9   1/1     Running   0             5d1h   10.244.0.21   minikube   <none>           <none>
+query-service-5588d77cbd-nltzj      1/1     Running   0             5d1h   10.244.0.23   minikube   <none>           <none>
+stream-processor-67bb89fb6b-cxcr9   1/1     Running   0             45h    10.244.0.29   minikube   <none>           <none>
+stream-processor-67bb89fb6b-tcvms   1/1     Running   0             2s     10.244.0.31   minikube   <none>           <none>
+++ kubectl get pods -l app=stream-processor --sort-by=.metadata.creationTimestamp -o 'jsonpath={.items[-1:].metadata.name}'
++ NEWPOD=stream-processor-67bb89fb6b-tcvms
++ echo 'new pod: stream-processor-67bb89fb6b-tcvms'
+new pod: stream-processor-67bb89fb6b-tcvms
++ echo
+
+++ date -u -Iseconds
++ echo '=== waiting 60s for kafka streams to settle: 2026-07-30T14:56:47+00:00 ==='
+=== waiting 60s for kafka streams to settle: 2026-07-30T14:56:47+00:00 ===
++ sleep 60
+++ date -u -Iseconds
++ echo 'settled at: 2026-07-30T14:57:47+00:00'
+settled at: 2026-07-30T14:57:47+00:00
++ echo
+
++ echo '=== consumer group describe after scale-up ==='
+=== consumer group describe after scale-up ===
++ kubectl exec -n kafka kafka-controller-0 -- kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group stream-processor
++ grep -v WARN
+Defaulted container "kafka" out of: kafka, prepare-config (init)
+
+GROUP            TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                                                        HOST            CLIENT-ID
+stream-processor play-events     1          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     3          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     5          452071          452071          0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     0          679022          679022          0               stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer-7672bb56-72e9-43c6-a18d-842491b004dc /10.244.0.31    stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer
+stream-processor play-events     2          -               0               -               stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer-7672bb56-72e9-43c6-a18d-842491b004dc /10.244.0.31    stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer
+stream-processor play-events     4          -               0               -               stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer-7672bb56-72e9-43c6-a18d-842491b004dc /10.244.0.31    stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer
++ echo
+
++ echo '=== logs of new pod (stream-processor-67bb89fb6b-tcvms) ==='
+=== logs of new pod (stream-processor-67bb89fb6b-tcvms) ===
++ kubectl logs stream-processor-67bb89fb6b-tcvms --tail=100
+2026-07-30T14:57:16.547Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Successfully joined group with generation Generation{generationId=12, memberId='stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer-7672bb56-72e9-43c6-a18d-842491b004dc', protocol='stream'}
+2026-07-30T14:57:16.668Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Successfully synced group in generation Generation{generationId=12, memberId='stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer-7672bb56-72e9-43c6-a18d-842491b004dc', protocol='stream'}
+2026-07-30T14:57:16.670Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Updating assignment with
+	Assigned partitions:                       []
+	Current owned partitions:                  []
+	Added partitions (assigned - owned):       []
+	Revoked partitions (owned - assigned):     []
+
+2026-07-30T14:57:16.670Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Notifying assignor about the new Assignment(partitions=[], userDataSize=40)
+2026-07-30T14:57:16.671Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.i.StreamsPartitionAssignor     : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer] Requested to schedule immediate rebalance for new tasks to be safely revoked from current owner.
+2026-07-30T14:57:16.673Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.processor.internals.TaskManager  : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] Handle new assignment with:
+	New active tasks: []
+	New standby tasks: []
+	Existing active tasks: []
+	Existing standby tasks: []
+2026-07-30T14:57:16.676Z  INFO 1 --- [stream-processor] [-StreamThread-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Adding newly assigned partitions: 
+2026-07-30T14:57:16.677Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.internals.StreamThread         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] State transition from STARTING to PARTITIONS_ASSIGNED
+2026-07-30T14:57:16.753Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.internals.StreamThread         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] State transition from PARTITIONS_ASSIGNED to RUNNING
+2026-07-30T14:57:16.754Z  INFO 1 --- [stream-processor] [-StreamThread-1] org.apache.kafka.streams.KafkaStreams    : stream-client [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61] State transition from REBALANCING to RUNNING
+2026-07-30T14:57:16.755Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.internals.StreamThread         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] Triggering the followup rebalance scheduled for 1970-01-01 00:00:00,000 Z.
+2026-07-30T14:57:16.755Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Request joining group due to: triggered followup rebalance scheduled for 0
+2026-07-30T14:57:16.756Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] (Re-)joining group
+2026-07-30T14:57:16.758Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Successfully joined group with generation Generation{generationId=13, memberId='stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer-7672bb56-72e9-43c6-a18d-842491b004dc', protocol='stream'}
+2026-07-30T14:57:16.842Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Successfully synced group in generation Generation{generationId=13, memberId='stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer-7672bb56-72e9-43c6-a18d-842491b004dc', protocol='stream'}
+2026-07-30T14:57:16.843Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Updating assignment with
+	Assigned partitions:                       [play-events-0, play-events-2, play-events-4]
+	Current owned partitions:                  []
+	Added partitions (assigned - owned):       [play-events-0, play-events-2, play-events-4]
+	Revoked partitions (owned - assigned):     []
+
+2026-07-30T14:57:16.843Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Notifying assignor about the new Assignment(partitions=[play-events-0, play-events-2, play-events-4], userDataSize=76)
+2026-07-30T14:57:16.844Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.i.StreamsPartitionAssignor     : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer] No followup rebalance was requested, resetting the rebalance schedule.
+2026-07-30T14:57:16.845Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.processor.internals.TaskManager  : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] Handle new assignment with:
+	New active tasks: [0_4, 0_2, 0_0]
+	New standby tasks: []
+	Existing active tasks: []
+	Existing standby tasks: []
+2026-07-30T14:57:16.865Z  INFO 1 --- [stream-processor] [-StreamThread-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Adding newly assigned partitions: play-events-0, play-events-2, play-events-4
+2026-07-30T14:57:16.866Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.internals.StreamThread         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] State transition from RUNNING to PARTITIONS_ASSIGNED
+2026-07-30T14:57:16.866Z  INFO 1 --- [stream-processor] [-StreamThread-1] org.apache.kafka.streams.KafkaStreams    : stream-client [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61] State transition from RUNNING to REBALANCING
+2026-07-30T14:57:17.024Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.i.ProcessorStateManager        : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] stream-task [0_4] State store completion-stats did not find checkpoint offset, hence would default to the starting offset at changelog stream-processor-completion-stats-changelog-4
+2026-07-30T14:57:17.024Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.i.ProcessorStateManager        : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] stream-task [0_4] State store hourly-play-counts did not find checkpoint offset, hence would default to the starting offset at changelog stream-processor-hourly-play-counts-changelog-4
+2026-07-30T14:57:17.024Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.processor.internals.StreamTask   : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] task [0_4] Initialized
+2026-07-30T14:57:17.027Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.internals.DefaultStateUpdater  : state-updater [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StateUpdater-1] Stateful active task 0_4 was added to the state updater
+2026-07-30T14:57:17.028Z  INFO 1 --- [stream-processor] [tream-processor] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Found no committed offset for partition play-events-2
+2026-07-30T14:57:17.029Z  INFO 1 --- [stream-processor] [tream-processor] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Found no committed offset for partition play-events-4
+2026-07-30T14:57:17.035Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.i.ProcessorStateManager        : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] stream-task [0_0] State store completion-stats did not find checkpoint offset, hence would default to the starting offset at changelog stream-processor-completion-stats-changelog-0
+2026-07-30T14:57:17.119Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.i.ProcessorStateManager        : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] stream-task [0_0] State store hourly-play-counts did not find checkpoint offset, hence would default to the starting offset at changelog stream-processor-hourly-play-counts-changelog-0
+2026-07-30T14:57:17.119Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.processor.internals.StreamTask   : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] task [0_0] Initialized
+2026-07-30T14:57:17.222Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.i.ProcessorStateManager        : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] stream-task [0_2] State store completion-stats did not find checkpoint offset, hence would default to the starting offset at changelog stream-processor-completion-stats-changelog-2
+2026-07-30T14:57:17.222Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.i.ProcessorStateManager        : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] stream-task [0_2] State store hourly-play-counts did not find checkpoint offset, hence would default to the starting offset at changelog stream-processor-hourly-play-counts-changelog-2
+2026-07-30T14:57:17.223Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.processor.internals.StreamTask   : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] task [0_2] Initialized
+2026-07-30T14:57:17.227Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition play-events-0 to the committed offset FetchPosition{offset=679022, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[kafka-controller-0.kafka-controller-headless.kafka.svc.cluster.local:9092 (id: 0 rack: null)], epoch=4}}
+2026-07-30T14:57:17.322Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Resetting offset for partition play-events-2 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[kafka-controller-0.kafka-controller-headless.kafka.svc.cluster.local:9092 (id: 0 rack: null)], epoch=2}}.
+2026-07-30T14:57:17.322Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Resetting offset for partition play-events-4 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[kafka-controller-0.kafka-controller-headless.kafka.svc.cluster.local:9092 (id: 0 rack: null)], epoch=2}}.
+2026-07-30T14:57:17.423Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] End offset for changelog stream-processor-completion-stats-changelog-4 initialized as 0.
+2026-07-30T14:57:17.424Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] End offset for changelog stream-processor-hourly-play-counts-changelog-4 initialized as 0.
+2026-07-30T14:57:17.425Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Assigned to partition(s): stream-processor-completion-stats-changelog-4, stream-processor-hourly-play-counts-changelog-4
+2026-07-30T14:57:17.426Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Seeking to earliest offset of partition stream-processor-completion-stats-changelog-4
+2026-07-30T14:57:17.426Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Seeking to earliest offset of partition stream-processor-hourly-play-counts-changelog-4
+2026-07-30T14:57:17.435Z  INFO 1 --- [stream-processor] [-StateUpdater-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Cluster ID: DQhVGoYMbi93d9IXgG0JRt
+2026-07-30T14:57:17.522Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Resetting offset for partition stream-processor-completion-stats-changelog-4 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[kafka-controller-0.kafka-controller-headless.kafka.svc.cluster.local:9092 (id: 0 rack: null)], epoch=2}}.
+2026-07-30T14:57:17.523Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Resetting offset for partition stream-processor-hourly-play-counts-changelog-4 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[kafka-controller-0.kafka-controller-headless.kafka.svc.cluster.local:9092 (id: 0 rack: null)], epoch=2}}.
+2026-07-30T14:57:17.626Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] Finished restoring changelog stream-processor-completion-stats-changelog-4 to store completion-stats with a total number of 0 records
+2026-07-30T14:57:17.627Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] Finished restoring changelog stream-processor-hourly-play-counts-changelog-4 to store hourly-play-counts with a total number of 0 records
+2026-07-30T14:57:17.643Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Unsubscribed all topics or patterns and assigned partitions
+2026-07-30T14:57:17.644Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.internals.DefaultStateUpdater  : state-updater [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StateUpdater-1] Stateful active task 0_4 completed restoration
+2026-07-30T14:57:17.644Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.internals.DefaultStateUpdater  : state-updater [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StateUpdater-1] Stateful active task 0_0 was added to the state updater
+2026-07-30T14:57:17.644Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.internals.DefaultStateUpdater  : state-updater [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StateUpdater-1] Stateful active task 0_2 was added to the state updater
+2026-07-30T14:57:17.648Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] End offset for changelog stream-processor-hourly-play-counts-changelog-0 initialized as 4836.
+2026-07-30T14:57:17.648Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] End offset for changelog stream-processor-hourly-play-counts-changelog-2 initialized as 0.
+2026-07-30T14:57:17.648Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] End offset for changelog stream-processor-completion-stats-changelog-0 initialized as 4868.
+2026-07-30T14:57:17.648Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] End offset for changelog stream-processor-completion-stats-changelog-2 initialized as 0.
+2026-07-30T14:57:17.648Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Assigned to partition(s): stream-processor-hourly-play-counts-changelog-0, stream-processor-hourly-play-counts-changelog-2, stream-processor-completion-stats-changelog-0, stream-processor-completion-stats-changelog-2
+2026-07-30T14:57:17.648Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Seeking to earliest offset of partition stream-processor-hourly-play-counts-changelog-0
+2026-07-30T14:57:17.648Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Seeking to earliest offset of partition stream-processor-hourly-play-counts-changelog-2
+2026-07-30T14:57:17.649Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Seeking to earliest offset of partition stream-processor-completion-stats-changelog-0
+2026-07-30T14:57:17.649Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Seeking to earliest offset of partition stream-processor-completion-stats-changelog-2
+2026-07-30T14:57:17.737Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Found no committed offset for partition play-events-4
+2026-07-30T14:57:17.755Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.processor.internals.StreamTask   : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] task [0_4] Restored and ready to run
+2026-07-30T14:57:17.857Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Requesting the log end offset for play-events-4 in order to compute lag
+2026-07-30T14:57:18.045Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Resetting offset for partition stream-processor-hourly-play-counts-changelog-0 to position FetchPosition{offset=4836, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[kafka-controller-0.kafka-controller-headless.kafka.svc.cluster.local:9092 (id: 0 rack: null)], epoch=2}}.
+2026-07-30T14:57:18.045Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Resetting offset for partition stream-processor-hourly-play-counts-changelog-2 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[kafka-controller-0.kafka-controller-headless.kafka.svc.cluster.local:9092 (id: 0 rack: null)], epoch=2}}.
+2026-07-30T14:57:18.045Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Resetting offset for partition stream-processor-completion-stats-changelog-0 to position FetchPosition{offset=4868, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[kafka-controller-0.kafka-controller-headless.kafka.svc.cluster.local:9092 (id: 0 rack: null)], epoch=2}}.
+2026-07-30T14:57:18.046Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Resetting offset for partition stream-processor-completion-stats-changelog-2 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[kafka-controller-0.kafka-controller-headless.kafka.svc.cluster.local:9092 (id: 0 rack: null)], epoch=2}}.
+2026-07-30T14:57:18.147Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] Finished restoring changelog stream-processor-hourly-play-counts-changelog-0 to store hourly-play-counts with a total number of 0 records
+2026-07-30T14:57:18.148Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] Finished restoring changelog stream-processor-hourly-play-counts-changelog-2 to store hourly-play-counts with a total number of 0 records
+2026-07-30T14:57:18.148Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] Finished restoring changelog stream-processor-completion-stats-changelog-0 to store completion-stats with a total number of 0 records
+2026-07-30T14:57:18.149Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.i.StoreChangelogReader         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] Finished restoring changelog stream-processor-completion-stats-changelog-2 to store completion-stats with a total number of 0 records
+2026-07-30T14:57:18.163Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Assigned to partition(s): stream-processor-hourly-play-counts-changelog-0, stream-processor-completion-stats-changelog-0
+2026-07-30T14:57:18.164Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.internals.DefaultStateUpdater  : state-updater [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StateUpdater-1] Stateful active task 0_2 completed restoration
+2026-07-30T14:57:18.167Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Found no committed offset for partition play-events-2
+2026-07-30T14:57:18.180Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-restore-consumer, groupId=null] Unsubscribed all topics or patterns and assigned partitions
+2026-07-30T14:57:18.180Z  INFO 1 --- [stream-processor] [-StateUpdater-1] o.a.k.s.p.internals.DefaultStateUpdater  : state-updater [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StateUpdater-1] Stateful active task 0_0 completed restoration
+2026-07-30T14:57:18.184Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.processor.internals.StreamTask   : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] task [0_2] Restored and ready to run
+2026-07-30T14:57:18.285Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Requesting the log end offset for play-events-2 in order to compute lag
+2026-07-30T14:57:18.298Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.processor.internals.StreamTask   : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] task [0_0] Restored and ready to run
+2026-07-30T14:57:18.299Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.s.p.internals.StreamThread         : stream-thread [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1] State transition from PARTITIONS_ASSIGNED to RUNNING
+2026-07-30T14:57:18.299Z  INFO 1 --- [stream-processor] [-StreamThread-1] org.apache.kafka.streams.KafkaStreams    : stream-client [stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61] State transition from REBALANCING to RUNNING
+2026-07-30T14:57:18.401Z  INFO 1 --- [stream-processor] [-StreamThread-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer, groupId=stream-processor] Requesting the log end offset for play-events-0 in order to compute lag
++ echo
+
+++ date -u -Iseconds
++ echo '=== pods at settled 2-replica state: 2026-07-30T14:58:17+00:00 ==='
+=== pods at settled 2-replica state: 2026-07-30T14:58:17+00:00 ===
++ kubectl get pods -l app=stream-processor -o wide
+NAME                                READY   STATUS    RESTARTS   AGE   IP            NODE       NOMINATED NODE   READINESS GATES
+stream-processor-67bb89fb6b-cxcr9   1/1     Running   0          45h   10.244.0.29   minikube   <none>           <none>
+stream-processor-67bb89fb6b-tcvms   1/1     Running   0          94s   10.244.0.31   minikube   <none>           <none>
++ echo
+
+++ date -u -Iseconds
++ echo '=== scale back to 1 replica: 2026-07-30T14:58:18+00:00 ==='
+=== scale back to 1 replica: 2026-07-30T14:58:18+00:00 ===
++ kubectl scale deployment stream-processor --replicas=1
+deployment.apps/stream-processor scaled
++ kubectl rollout status deployment/stream-processor --timeout=120s
+deployment "stream-processor" successfully rolled out
+++ date -u -Iseconds
++ echo 'rollout done: 2026-07-30T14:58:18+00:00'
+rollout done: 2026-07-30T14:58:18+00:00
++ sleep 15
++ echo
+
+++ date -u -Iseconds
++ echo '=== FINAL pods: 2026-07-30T14:58:33+00:00 ==='
+=== FINAL pods: 2026-07-30T14:58:33+00:00 ===
++ kubectl get pods -o wide
+NAME                                READY   STATUS    RESTARTS      AGE    IP            NODE       NOMINATED NODE   READINESS GATES
+hello-app-55c55b8956-gtl8j          1/1     Running   2 (22d ago)   55d    10.244.0.17   minikube   <none>           <none>
+ingestion-service-b95675d96-5qmc9   1/1     Running   0             5d1h   10.244.0.21   minikube   <none>           <none>
+query-service-5588d77cbd-nltzj      1/1     Running   0             5d1h   10.244.0.23   minikube   <none>           <none>
+stream-processor-67bb89fb6b-cxcr9   1/1     Running   0             45h    10.244.0.29   minikube   <none>           <none>
++ echo
+
+++ date -u -Iseconds
++ echo '=== FINAL consumer group describe: 2026-07-30T14:58:33+00:00 ==='
+=== FINAL consumer group describe: 2026-07-30T14:58:33+00:00 ===
++ kubectl exec -n kafka kafka-controller-0 -- kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group stream-processor
++ grep -v WARN
+Defaulted container "kafka" out of: kafka, prepare-config (init)
+
+GROUP            TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                                                        HOST            CLIENT-ID
+stream-processor play-events     1          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     3          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     5          452071          452071          0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     0          679022          679022          0               stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer-7672bb56-72e9-43c6-a18d-842491b004dc /10.244.0.31    stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer
+stream-processor play-events     2          -               0               -               stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer-7672bb56-72e9-43c6-a18d-842491b004dc /10.244.0.31    stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer
+stream-processor play-events     4          -               0               -               stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer-7672bb56-72e9-43c6-a18d-842491b004dc /10.244.0.31    stream-processor-8d7cf3d4-7ab2-40ca-ac72-edb33f216f61-StreamThread-1-consumer
+
+=== +45s after scale-down, re-check group membership converged: 2026-07-30T15:00:48+00:00 ===
+Defaulted container "kafka" out of: kafka, prepare-config (init)
+
+GROUP            TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                                                        HOST            CLIENT-ID
+stream-processor play-events     1          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     0          679022          679022          0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     3          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     2          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     5          452071          452071          0               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
+stream-processor play-events     4          -               0               -               stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer-1f90e122-c190-4210-99ab-6a651915370e /10.244.0.29    stream-processor-c0fc3b41-8785-4632-8558-c6336df1f43a-StreamThread-1-consumer
