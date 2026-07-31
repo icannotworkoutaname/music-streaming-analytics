@@ -163,14 +163,3 @@ Comments inside the scripts follow the repository convention and remain in Chine
 | Kafka | 9092 |
 | Prometheus | 9090 |
 | Grafana | 3000 |
-
-## Project Status
-
-- [x] Week 1: Core infrastructure and end-to-end pipeline
-- [x] Week 2: Observability, full in-cluster K8s deployment
-- [x] Load testing and failure drills (see [docs/performance.md](docs/performance.md))
-- [x] `readinessProbe` on all three services, verified before/after ([ADR 007](docs/decisions/007-failure-recovery-observations.md) Observation 3)
-- [x] One-command demo with end-to-end result verification ([DEMO.md](DEMO.md))
-- [ ] PostgreSQL integration for historical queries
-- [ ] Trim expired members from the top-songs Sorted Set (see [DEMO.md](DEMO.md) known limitations)
-- [ ] GKE deployment
