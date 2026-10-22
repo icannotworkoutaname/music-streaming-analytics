@@ -29,8 +29,8 @@ Option B was adopted.
 
 - Benefits:
   - **Decoupled responsibilities**: `stream-processor` (write path / computation) and `query-service` (read path / queries) are deployed and scaled independently without blocking each other — query-service can run multiple instances to absorb read traffic without affecting the stream-processing workload.
-  - **Clear component boundaries**: Kafka handles data movement, Redis carries the read model, and PostgreSQL (to be integrated later) handles historical archiving. Each component holds a single responsibility, so replacing any one of them does not disturb the others.
-  - **Room for historical queries**: beyond Redis, an additional write path into PostgreSQL can be added later for longer-horizon historical queries, with no change to `stream-processor`.
+  - **Clear component boundaries**: Kafka handles data movement, Redis carries the read model, and PostgreSQL handles historical archiving. Each component holds a single responsibility, so replacing any one of them does not disturb the others.
+  - **Room for historical queries**: beyond Redis, an additional write path into PostgreSQL can be added for longer-horizon historical queries, with no change to `stream-processor`. **Implemented**: `StatsConsumer` upserts every window result into `song_completion_stats` / `song_hourly_counts` (keyed by `song_id, window_start`, so repeated emissions for the same window overwrite rather than duplicate) before updating Redis, and `QueryController` exposes `/api/songs/{id}/completion/history` and `/api/songs/{id}/plays/history` over a `from`/`to` epoch-millis range. The schema is managed by Flyway (`db/migration/V1__create_history_tables.sql`). Redis remains the source for "latest" queries; PostgreSQL is only consulted by the history endpoints.
 - Costs:
   - The extra Kafka topic hop and Redis write make end-to-end latency higher than Option A (one more network round trip plus serialisation), but this is entirely acceptable for the present use case (minute-scale windowed aggregation, not real-time transactions).
   - Consistency must be maintained between the data models emitted by `stream-processor` (`SongCompletionStats`, `SongHourlyCount`) and the consumption logic in `query-service`; schema changes require coordinated updates on both sides.
@@ -66,8 +66,8 @@ Day 6 需要对外提供一个查询接口，让客户端能查到 `stream-proce
 
 - 好处：  
   - **职责解耦**：`stream-processor`（写路径/计算）和 `query-service`（读路径/查询）完全独立部署、独立扩展，互不阻塞——query-service 可以起多个实例应对读流量，不影响流处理的计算负载。  
-  - **组件职责边界清晰**：Kafka 负责数据流转、Redis 承载读模型、PostgreSQL（未来接入）负责历史归档，每个组件只承担一类职责，替换其中任何一环都不会波及其他部分。  
-  - **为历史数据查询留了扩展空间**：Redis 之外未来可以再加一层写入 PostgreSQL，做更长周期的历史查询，不需要改动 `stream-processor`。  
+  - **组件职责边界清晰**：Kafka 负责数据流转、Redis 承载读模型、PostgreSQL 负责历史归档，每个组件只承担一类职责，替换其中任何一环都不会波及其他部分。  
+  - **为历史数据查询留了扩展空间**：Redis 之外再加一层写入 PostgreSQL，做更长周期的历史查询，不需要改动 `stream-processor`。**已实现**：`StatsConsumer` 在更新 Redis 之前把每个窗口结果 upsert 到 `song_completion_stats` / `song_hourly_counts`（主键 `song_id, window_start`，同一窗口的多次输出覆盖而不是重复），`QueryController` 提供 `/api/songs/{id}/completion/history` 与 `/api/songs/{id}/plays/history`，按 `from`/`to` 毫秒时间戳范围查询。表结构由 Flyway 管理（`db/migration/V1__create_history_tables.sql`）。"最新值"查询仍只读 Redis，历史接口才读 PostgreSQL。  
 - 代价：  
   - 多了一层 Kafka topic 中转和 Redis 写入，端到端延迟比方式 A 高（多了一次网络往返和序列化开销），但对当前场景（分钟级窗口聚合，非实时交易）完全可以接受。  
   - 需要维护 `stream-processor` 输出的数据模型（`SongCompletionStats`、`SongHourlyCount`）和 `query-service` 消费逻辑的一致性，schema 变更需要两边同步。
