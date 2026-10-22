@@ -17,8 +17,11 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.http.HttpStatus
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.kafka.KafkaContainer
 import org.testcontainers.utility.DockerImageName
+import org.springframework.core.ParameterizedTypeReference
+import org.springframework.http.HttpMethod
 import java.time.Duration
 import java.util.Properties
 
@@ -36,6 +39,11 @@ class QueryServiceIT {
         @ServiceConnection
         @JvmStatic
         val redis = RedisContainer(DockerImageName.parse("redis:7"))
+
+        @Container
+        @ServiceConnection
+        @JvmStatic
+        val postgres = PostgreSQLContainer(DockerImageName.parse("postgres:16"))
     }
 
     @Autowired
@@ -72,6 +80,38 @@ class QueryServiceIT {
             assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
             assertThat(response.body).isEqualTo(stats)
         }
+    }
+
+    @Test
+    fun `completion stats are archived to postgres and queryable as history`() {
+        val songId = "song-H"
+        val first = SongCompletionStats(songId, 1717600000000L, 1717600300000L, 10, 5, 0.5)
+        // 同一窗口的第二次输出应覆盖第一次（upsert），而不是产生两行
+        val firstUpdated = first.copy(starts = 12, completes = 9, completionRate = 0.75)
+        val second = SongCompletionStats(songId, 1717600300000L, 1717600600000L, 4, 4, 1.0)
+
+        producer = createTestProducer(kafka.bootstrapServers)
+        listOf(first, firstUpdated, second).forEach {
+            producer.send(ProducerRecord("song-completion-stats", it.songId, mapper.writeValueAsString(it))).get()
+        }
+
+        await().atMost(Duration.ofSeconds(10)).untilAsserted {
+            val response = restTemplate.exchange(
+                "/api/songs/$songId/completion/history?from=${first.windowStart}&to=${second.windowEnd}",
+                HttpMethod.GET, null,
+                object : ParameterizedTypeReference<List<SongCompletionStats>>() {}
+            )
+            assertThat(response.statusCode).isEqualTo(HttpStatus.OK)
+            assertThat(response.body).containsExactly(firstUpdated, second)
+        }
+    }
+
+    @Test
+    fun `history rejects inverted range`() {
+        val response = restTemplate.getForEntity(
+            "/api/songs/any/completion/history?from=200&to=100", String::class.java
+        )
+        assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
     }
 
     private fun createTestProducer(bootstrapServers: String): KafkaProducer<String, String> {
