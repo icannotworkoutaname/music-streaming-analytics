@@ -1,0 +1,21 @@
+# helm get values postgres -n data -o yaml（已去掉 auth.postgresPassword，升级时用 --set 传入）
+# 应用: helm upgrade postgres <chart> -n data -f k8s/postgres-values.yaml \
+#         --set auth.postgresPassword="$POSTGRES_PASSWORD"
+#
+# chart: postgresql-16.7.27   app version: 17.6.0   namespace: data   installed: 2026-06-05
+#
+# 生成的 Service 为 postgres-postgresql.data.svc.cluster.local:5432，
+# 密码在 Secret data/postgres-postgresql 的 postgres-password 键；query-service 位于
+# default namespace，需要把该 Secret 复制为 default/postgres-credentials（见 README）。
+auth:
+  database: appdb
+global:
+  security:
+    allowInsecureImages: true
+image:
+  registry: registry-1.docker.io
+  repository: bitnamilegacy/postgresql
+  tag: 17.6.0
+primary:
+  persistence:
+    size: 2Gi

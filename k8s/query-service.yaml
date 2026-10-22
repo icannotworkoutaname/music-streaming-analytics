@@ -30,6 +30,14 @@ spec:
               value: "kafka.kafka.svc.cluster.local:9092"
             - name: REDIS_HOST
               value: "redis-master.data.svc.cluster.local"
+            - name: POSTGRES_HOST
+              value: "postgres-postgresql.data.svc.cluster.local"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  # Secret 不能跨 namespace 引用；从 data/postgres-postgresql 复制而来，见 README
+                  name: postgres-credentials
+                  key: postgres-password
           resources:
             requests:
               memory: "256Mi"
